@@ -1,0 +1,52 @@
+steps:
+  - task: NuGetToolInstaller@0
+    displayName: Use NuGet 5.5.0
+    inputs:
+      versionSpec: $(NuGetVersion)
+
+  - task: UseDotNet@2
+    displayName: Use .NET Core sdk $(DotNetCoreVersion)
+    inputs:
+      packageType: sdk
+      version: $(DotNetCoreVersion)
+
+  - task: DotNetCoreCLI@2
+    displayName: Restore
+    inputs:
+      command: restore
+      feedsToUse: config
+      projects: $(solutionFile)
+      nugetConfigPath: NuGet.config
+
+  - task: VSBuild@1
+    displayName: Build
+    inputs:
+      solution: $(solutionFile)
+      platform: $(platform)
+      configuration: $(buildConfiguration)
+      clean: false
+      restoreNugetPackages: false
+
+  - task: DotNetCoreCLI@2
+    displayName: Run Tests
+    inputs:
+      command: test
+      projects: $(testProjects)
+      arguments: '--configuration $(buildConfiguration) --no-restore --collect "XPlat Code Coverage" /p:threshold=10 /p:CollectCoverage=true'
+      nobuild: true
+
+  - task: DotNetCoreCLI@2
+    displayName: Publish & Zip
+    inputs:
+      command: publish
+      publishWebProjects: false
+      projects: |
+        $(webProjectFile)
+      arguments: '--configuration $(buildConfiguration) --no-restore --output $(Build.ArtifactStagingDirectory)'
+
+  - task: PublishBuildArtifacts@1
+    displayName: Publish Artifacts
+    inputs:
+      PathtoPublish: $(Build.ArtifactStagingDirectory)
+      ArtifactName: web
+      publishLocation: Container
