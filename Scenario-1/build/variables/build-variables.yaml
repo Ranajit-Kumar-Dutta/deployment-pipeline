@@ -1,0 +1,12 @@
+ variables:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  NuGetVersion: 5.5.0
+  DotNetCoreVersion: 3.1.x
+  platform: any cpu
+  buildConfiguration: Release
+  solutionFile: WebApp.sln
+  projectPath: src/Web.API
+  webProjectPath: src/Web.UI
+  projectFile: src/Web.API/Web.API.csproj
+  webProjectFile: src/Web.UI/Web.UI.csproj
+  testProjects: tests/**/*.Tests.csproj

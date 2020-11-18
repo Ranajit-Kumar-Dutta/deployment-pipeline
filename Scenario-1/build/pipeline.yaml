@@ -1,0 +1,205 @@
+name: $(Date:yyyyMMdd).$(Rev:r)
+# Pipeline is run on commits, tags PRs and master and dev branch
+trigger:
+  - main
+
+
+# build Stage
+stages:
+  - stage: Build
+    jobs:
+      - job: 'Build'
+        displayName: 'Build Web API'
+        pool:
+          vmImage: 'windows-latest'
+          demands:
+            - msbuild
+            - visualstudio
+        variables:
+          - template: 'variable/build-variables.yaml'
+        steps:
+          - template: 'template/api-build-steps.yaml'
+          - template: 'template/ui-build-steps.yaml'
+
+  # Deploy to dev
+  - stage: dev
+    dependsOn:
+      - Build
+    displayName: 'Deploy to *dev* environment'
+    condition: succeeded('Build')
+    jobs:
+      - deployment: Api_Dev
+        environment: dev_app
+        pool:
+          name: 'Azure Pipelines'
+          vmImage: 'windows-latest'
+        displayName: 'Deploy to Web API dev environment'
+        variables:
+          - name: StageEnvironment
+            value: dev
+          - name: Component
+            value: api
+          - template: 'variable/deployment-parameters.yaml'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: 'template/deploy-app.yaml'
+                  parameters:
+                    environment: $(StageEnvironment)
+                    rootServiceConnectionName: ${{variables.rootServiceConnectionName}}
+                    resourceServiceConnectionName: ${{variables.rootServiceConnectionName}}
+                    resourceGroupName: $(resourceGroupName)
+                    webAppName: $(webAppName)
+                    artifactfolder: app
+
+  - stage: dev_ui
+    dependsOn:
+      - Build
+    displayName: 'Deploy to *dev* environment'
+    condition: succeeded('Build')
+    jobs:
+      - deployment: UI_Dev
+        environment: dev_app
+        pool:
+          name: 'Azure Pipelines'
+          vmImage: 'windows-latest'
+        displayName: 'Deploy to Web UI dev environment'
+        variables:
+          - name: StageEnvironment
+            value: dev
+          - name: Component
+            value: ui
+          - template: 'variable/deployment-parameters.yaml'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: 'template/deploy-app.yaml'
+                  parameters:
+                    environment: $(StageEnvironment)
+                    rootServiceConnectionName: ${{variables.rootServiceConnectionName}}
+                    resourceServiceConnectionName: ${{variables.rootServiceConnectionName}}
+                    resourceGroupName: $(resourceGroupName)
+                    webAppName: $(webAppName)
+                    artifactfolder: web
+
+  # Deploy to QA
+  - stage: QA
+    dependsOn: dev
+    displayName: 'Deploy to *QA* environment'
+    condition: succeeded('dev')
+    jobs:
+      - deployment: Api_QA
+        environment: QA_app
+        pool:
+          name: 'Azure Pipelines'
+          vmImage: 'windows-latest'
+        displayName: 'Deploy to Web API QA environment'
+        variables:
+          - name: StageEnvironment
+            value: QA
+          - name: Component
+            value: api
+          - template: 'variable/deployment-parameters.yaml'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: 'template/deploy-app.yaml'
+                  parameters:
+                    environment: $(StageEnvironment)
+                    rootServiceConnectionName: ${{variables.rootServiceConnectionName}}
+                    resourceServiceConnectionName: ${{variables.rootServiceConnectionName}}
+                    resourceGroupName: $(resourceGroupName)
+                    webAppName: $(webAppName)
+                    artifactfolder: app
+
+  - stage: QA_ui
+    dependsOn: dev_ui
+    displayName: 'Deploy to *QA* environment'
+    condition: succeeded('dev_ui')
+    jobs:
+      - deployment: UI_QA
+        environment: QA_app
+        pool:
+          name: 'Azure Pipelines'
+          vmImage: 'windows-latest'
+        displayName: 'Deploy to Web UI QA environment'
+        variables:
+          - name: StageEnvironment
+            value: QA
+          - name: Component
+            value: ui
+          - template: 'variable/deployment-parameters.yaml'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: 'template/deploy-app.yaml'
+                  parameters:
+                    environment: $(StageEnvironment)
+                    rootServiceConnectionName: ${{variables.rootServiceConnectionName}}
+                    resourceServiceConnectionName: ${{variables.rootServiceConnectionName}}
+                    resourceGroupName: $(resourceGroupName)
+                    webAppName: $(webAppName)
+                    artifactfolder: web
+
+  # Deploy to prod
+  - stage: prod
+    dependsOn: QA
+    displayName: 'Deploy to *prod* environment'
+    condition: succeeded('QA')
+    jobs:
+      - deployment: Api_prod
+        environment: prod_app
+        pool:
+          name: 'Azure Pipelines'
+          vmImage: 'windows-latest'
+        displayName: 'Deploy to Web API prod environment'
+        variables:
+          - name: StageEnvironment
+            value: prod
+          - name: Component
+            value: api
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: 'template/deploy-app.yaml'
+                  parameters:
+                    environment: $(StageEnvironment)
+                    rootServiceConnectionName: ${{variables.rootServiceConnectionName}}
+                    resourceServiceConnectionName: ${{variables.rootServiceConnectionName}}
+                    resourceGroupName: $(resourceGroupName)
+                    webAppName: $(webAppName)
+                    artifactfolder: app
+
+  - stage: prod_ui
+    dependsOn: QA_ui
+    displayName: 'Deploy to *prod* environment'
+    condition: succeeded('QA_ui')
+    jobs:
+      - deployment: UI_prod
+        environment: prod_app
+        pool:
+          name: 'Azure Pipelines'
+          vmImage: 'windows-latest'
+        displayName: 'Deploy to Web UI prod environment'
+        variables:
+          - name: StageEnvironment
+            value: prod
+          - name: Component
+            value: ui
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: 'template/deploy-app.yaml'
+                  parameters:
+                    environment: $(StageEnvironment)
+                    rootServiceConnectionName: ${{variables.rootServiceConnectionName}}
+                    resourceServiceConnectionName: ${{variables.rootServiceConnectionName}}
+                    resourceGroupName: $(resourceGroupName)
+                    webAppName: $(webAppName)
+                    artifactfolder: web

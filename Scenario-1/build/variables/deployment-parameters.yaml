@@ -1,0 +1,5 @@
+variables:
+  rootServiceConnectionName: workspace-web-deployment
+  resourcePrefix: FastCarz
+  resourceGroupName: webapp-$(StageEnvironment)
+  webAppName: $(resourcePrefix)-$(StageEnvironment)-$(Component)-webapp

@@ -1,0 +1,65 @@
+parameters:
+  - name: environment
+    type: string
+
+  - name: rootServiceConnectionName
+    type: string
+
+  - name: resourceServiceConnectionName
+    type: string
+
+  - name: resourceGroupName
+    type: string
+
+  - name: webAppName
+    type: string
+
+  - name: artifactfolder
+    type: string
+
+steps:
+  - download: current
+    displayName: 'Downloading App File'
+    artifact: ${{ parameters.artifactfolder }}
+
+  - task: AzureRmWebAppDeployment@4
+    displayName: 'Deploy to Staging'
+    inputs:
+      azureSubscription: '${{ parameters.resourceServiceConnectionName }}'
+      appType: webApp
+      webAppName: ${{parameters.WebAppName}}
+      deployToSlotOrASE: true
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      slotName: staging
+      package: '$(Pipeline.Workspace)/${{ parameters.artifactfolder }}/*.zip'
+      enableCustomDeployment: true
+      deploymentType: zipDeploy
+      JSONFiles: appsettings.json
+
+  - task: AzureAppServiceManage@0
+    displayName: 'Start Staging Slot'
+    inputs:
+      azureSubscription: ${{ parameters.resourceServiceConnectionName }}
+      action: 'Start Azure App Service'
+      webAppName: ${{parameters.WebAppName}}
+      specifySlotOrASE: true
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      slot: staging
+
+  - task: AzureAppServiceManage@0
+    displayName: 'Swap to Production'
+    inputs:
+      azureSubscription: ${{ parameters.resourceServiceConnectionName }}
+      webAppName: ${{parameters.WebAppName}}
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      sourceSlot: staging
+
+  - task: AzureAppServiceManage@0
+    displayName: 'Stop Staging Slot'
+    inputs:
+      azureSubscription: ${{ parameters.resourceServiceConnectionName }}
+      action: 'Stop Azure App Service'
+      webAppName: ${{parameters.WebAppName}}
+      specifySlotOrASE: true
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      slot: staging
