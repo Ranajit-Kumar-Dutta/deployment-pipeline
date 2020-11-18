@@ -9,7 +9,7 @@ stages:
   - stage: Build
     jobs:
       - job: 'Build'
-        displayName: 'Build Web API'
+        displayName: 'Build Web and API'
         pool:
           vmImage: 'windows-latest'
           demands:
